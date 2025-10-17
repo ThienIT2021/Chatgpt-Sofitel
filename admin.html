@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quản trị Key & OpenAI API</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    html, body { height: 100%; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .glass { backdrop-filter: blur(8px); background: color-mix(in oklab, white 70%, transparent); }
+    .dark .glass { background: color-mix(in oklab, black 50%, transparent); }
+    .table th { font-weight: 600; font-size: 12px; letter-spacing: .02em; text-transform: uppercase; }
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+  </style>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <div class="mx-auto max-w-7xl p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow"></div>
+        <div>
+          <h1 class="text-xl font-bold">Bảng điều khiển Admin</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Quản lý tài khoản, OpenAI API key, tạo & ràng buộc key người dùng</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="themeBtn" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm">Sáng/Tối</button>
+        <a href="index.html" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm">Trang người dùng</a>
+        <button id="logoutBtn" class="px-3 py-2 rounded-xl bg-red-600 text-white text-sm hidden">Đăng xuất</button>
+      </div>
+    </header>
+
+    <!-- Auth View -->
+    <section id="authView" class="max-w-md mx-auto glass rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <h2 class="font-semibold mb-4">Đăng nhập Admin</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="text-sm text-slate-500">Tài khoản</label>
+          <input id="username" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value="admin">
+        </div>
+        <div>
+          <label class="text-sm text-slate-500">Mật khẩu</label>
+          <input id="password" type="password" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none">
+        </div>
+        <button id="loginBtn" class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-500">Đăng nhập</button>
+        <p id="authMsg" class="text-sm mt-2"></p>
+        <p class="text-xs text-slate-500 mt-2">Mặc định: tài khoản <b>admin</b>. Lần đầu sẽ yêu cầu đặt mật khẩu.</p>
+      </div>
+    </section>
+
+    <!-- App View -->
+    <section id="appView" class="hidden">
+      <div class="grid lg:grid-cols-3 gap-6">
+
+        <!-- Account -->
+        <div class="lg:col-span-1 space-y-6">
+          <div class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 class="font-semibold mb-4">Tài khoản Admin</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-sm text-slate-500">Mật khẩu hiện tại</label>
+                <input id="oldPass" type="password" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none">
+              </div>
+              <div>
+                <label class="text-sm text-slate-500">Mật khẩu mới</label>
+                <input id="newPass" type="password" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none">
+              </div>
+              <button id="changePassBtn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">Đổi mật khẩu</button>
+              <p id="passMsg" class="text-sm mt-2"></p>
+            </div>
+          </div>
+
+          <!-- OpenAI API -->
+          <div class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 class="font-semibold mb-4">Cấu hình OpenAI API</h3>
+            <div class="space-y-3">
+              <input id="apiKey" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" placeholder="OpenAI API Key (Bearer)">
+              <div class="flex items-center gap-2">
+                <button id="saveApiBtn" class="px-3 py-2 rounded-xl bg-emerald-600 text-white">Lưu</button>
+                <button id="showApiBtn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">Hiển thị</button>
+                <button id="delApiBtn" class="px-3 py-2 rounded-xl bg-rose-600 text-white">Xoá</button>
+              </div>
+              <p id="apiMsg" class="text-sm mt-2 text-slate-500">
+                Endpoint: <code>POST https://api.openai.com/v1/chat/completions</code>, model khuyến nghị: <code>gpt-4o-mini</code>.
+              </p>
+              <div class="text-xs text-slate-500">
+                Khi lưu API key: trang người dùng sẽ tự chuyển sang “Chat thật”. Khi xoá key: tự trở lại “Demo”.
+              </div>
+            </div>
+          </div>
+
+          <!-- Backup & Restore -->
+          <div class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 class="font-semibold mb-4">Sao lưu &amp; Khôi phục dữ liệu</h3>
+            <p class="text-sm text-slate-500 mb-3">
+              Dữ liệu gồm: <code>adminCreds</code>, <code>openaiApiKey</code>, <code>userKeys</code>, <code>activeSession</code>, <code>deviceId</code>, v.v. (toàn bộ localStorage).
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="backupBtn" class="px-3 py-2 rounded-xl bg-indigo-600 text-white">Tải bản sao lưu (.json)</button>
+
+              <input id="restoreFile" type="file" accept="application/json" class="hidden">
+              <label for="restoreFile" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 cursor-pointer">Chọn file khôi phục</label>
+              <button id="restoreBtn" class="px-3 py-2 rounded-xl bg-emerald-600 text-white">Khôi phục</button>
+            </div>
+            <p id="backupMsg" class="text-sm mt-3 text-slate-500"></p>
+          </div>
+        </div>
+
+        <!-- Key Creator -->
+        <div class="lg:col-span-2 glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h3 class="font-semibold mb-4">Tạo Key người dùng</h3>
+          <div class="grid md:grid-cols-3 gap-4">
+            <div class="md:col-span-1">
+              <label class="text-sm text-slate-500">Tên người dùng</label>
+              <input id="userNameInput" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" placeholder="vd: Nguyen Van A">
+            </div>
+            <div class="md:col-span-1">
+              <label class="text-sm text-slate-500">Thời hạn (giờ)</label>
+              <input id="durationHours" type="number" min="1" value="24" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none">
+            </div>
+            <div class="md:col-span-1">
+              <label class="text-sm text-slate-500">Key</label>
+              <div class="flex items-center gap-2">
+                <input id="keyOutput" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" readonly>
+                <button id="genKeyBtn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">Random</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center gap-2">
+            <button id="createKeyBtn" class="px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:bg-indigo-500">Tạo key</button>
+            <button id="copyKeyBtn" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">Copy key</button>
+          </div>
+
+          <p class="text-sm text-slate-500 mt-3">Để ràng buộc thiết bị: yêu cầu người dùng <b>copy ID</b> trên trang index và dán vào key (mục “Thêm thiết bị”).</p>
+        </div>
+
+      </div>
+
+      <!-- Keys Table -->
+      <div class="mt-6 glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold">Danh sách key</h3>
+          <div class="text-sm text-slate-500" id="keysCount">0 key</div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full table">
+            <thead>
+              <tr class="text-left text-slate-500">
+                <th class="px-3 py-2">User</th>
+                <th class="px-3 py-2">Key</th>
+                <th class="px-3 py-2">Thiết bị</th>
+                <th class="px-3 py-2">Hết hạn</th>
+                <th class="px-3 py-2">Trạng thái</th>
+                <th class="px-3 py-2">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="keysBody" class="text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /************** Constants & Helpers **************/
+    const DB_KEYS = {
+      ADMIN_CREDS: 'adminCreds',
+      OPENAI_KEY: 'openaiApiKey',
+      USER_KEYS : 'userKeys'
+    };
+    const $ = (s)=>document.querySelector(s);
+    const fmt = (d)=> new Date(d).toLocaleString();
+
+    const getDB = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? def } catch { return def } };
+    const setDB = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    const genUUID = ()=> {
+      const arr = crypto.getRandomValues(new Uint8Array(16));
+      arr[6]=(arr[6]&0x0f)|0x40; arr[8]=(arr[8]&0x3f)|0x80;
+      const h=[...arr].map(b=>b.toString(16).padStart(2,'0')).join('');
+      return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+    };
+    const genKey = ()=> {
+      const seg = ()=> crypto.getRandomValues(new Uint8Array(2)).reduce((a,b)=>a+('0'+b.toString(16)).slice(-2),'').toUpperCase().slice(0,4);
+      return `GPT-${seg()}-${seg()}-${seg()}`;
+    };
+    const hash = async (str)=>{
+      const buf = new TextEncoder().encode(str);
+      const d = await crypto.subtle.digest('SHA-256', buf);
+      return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    };
+
+    /************** Theme **************/
+    const themeBtn = $('#themeBtn');
+    themeBtn?.addEventListener('click', ()=> document.documentElement.classList.toggle('dark'));
+
+    /************** Auth **************/
+    const authView = $('#authView');
+    const appView = $('#appView');
+    const username = $('#username');
+    const password = $('#password');
+    const loginBtn = $('#loginBtn');
+    const authMsg = $('#authMsg');
+    const logoutBtn = $('#logoutBtn');
+
+    const oldPass = $('#oldPass');
+    const newPass = $('#newPass');
+    const changePassBtn = $('#changePassBtn');
+    const passMsg = $('#passMsg');
+
+    function showAuth(){ authView.classList.remove('hidden'); appView.classList.add('hidden'); logoutBtn.classList.add('hidden'); }
+    function showApp(){ authView.classList.add('hidden'); appView.classList.remove('hidden'); logoutBtn.classList.remove('hidden'); }
+
+    function loadCreds(){ return getDB(DB_KEYS.ADMIN_CREDS, {username:'admin', passwordHash:'', mustChange:true}); }
+    function saveCreds(c){ setDB(DB_KEYS.ADMIN_CREDS, c); }
+
+    loginBtn.addEventListener('click', async ()=>{
+      const creds = loadCreds();
+      if(username.value.trim() !== creds.username){
+        authMsg.textContent = 'Sai tài khoản.'; authMsg.className='text-sm mt-2 text-rose-600'; return;
+      }
+      if(creds.mustChange){
+        if(!password.value.trim()){
+          authMsg.textContent = 'Lần đầu đăng nhập: hãy đặt mật khẩu mới trong mục "Đổi mật khẩu".';
+          authMsg.className='text-sm mt-2 text-amber-600';
+          showApp(); renderKeys(); return;
+        }
+      }
+      const ok = creds.passwordHash ? (await hash(password.value) === creds.passwordHash) : true;
+      if(!ok){ authMsg.textContent='Sai mật khẩu.'; authMsg.className='text-sm mt-2 text-rose-600'; return; }
+      authMsg.textContent='Đăng nhập thành công.'; authMsg.className='text-sm mt-2 text-emerald-600';
+      showApp(); renderKeys();
+    });
+
+    logoutBtn.addEventListener('click', ()=> showAuth());
+
+    changePassBtn.addEventListener('click', async ()=>{
+      const creds = loadCreds();
+      if(creds.passwordHash){
+        if(!oldPass.value){ passMsg.textContent='Nhập mật khẩu hiện tại.'; passMsg.className='text-sm mt-2 text-rose-600'; return; }
+        if(await hash(oldPass.value) !== creds.passwordHash){
+          passMsg.textContent='Mật khẩu hiện tại không đúng.'; passMsg.className='text-sm mt-2 text-rose-600'; return;
+        }
+      }
+      if(!newPass.value || newPass.value.length < 6){
+        passMsg.textContent='Mật khẩu mới tối thiểu 6 ký tự.'; passMsg.className='text-sm mt-2 text-rose-600'; return;
+      }
+      creds.passwordHash = await hash(newPass.value);
+      creds.mustChange = false;
+      saveCreds(creds);
+      oldPass.value = newPass.value = '';
+      passMsg.textContent='Đổi mật khẩu thành công.'; passMsg.className='text-sm mt-2 text-emerald-600';
+    });
+
+    /************** OpenAI API Key Storage **************/
+    const apiKey = $('#apiKey');
+    const saveApiBtn = $('#saveApiBtn');
+    const showApiBtn = $('#showApiBtn');
+    const delApiBtn = $('#delApiBtn');
+    const apiMsg = $('#apiMsg');
+
+    function refreshApiUI(){
+      const val = localStorage.getItem(DB_KEYS.OPENAI_KEY);
+      apiKey.value = val ? (val.slice(0,6)+'…'+val.slice(-4)) : '';
+    }
+    saveApiBtn.addEventListener('click', ()=>{
+      const raw = apiKey.value.trim();
+      if(!raw){ apiMsg.textContent='Vui lòng nhập OpenAI API key trước.'; return; }
+      localStorage.setItem(DB_KEYS.OPENAI_KEY, raw);
+      refreshApiUI();
+      apiMsg.textContent='Đã lưu OpenAI API key (client-side cho mục đích thử nghiệm).';
+      // index.html tự chuyển sang Chat thật nhờ storage event
+    });
+    showApiBtn.addEventListener('click', ()=>{
+      const v = localStorage.getItem(DB_KEYS.OPENAI_KEY);
+      if(!v){ apiMsg.textContent='Chưa có API key.'; return; }
+      apiKey.value = v;
+      apiMsg.textContent='Đã hiển thị OpenAI API key.';
+    });
+    delApiBtn.addEventListener('click', ()=>{
+      localStorage.removeItem(DB_KEYS.OPENAI_KEY);
+      apiKey.value = '';
+      apiMsg.textContent='Đã xoá OpenAI API key. Trang người dùng sẽ tự chuyển về Demo.';
+    });
+
+    /************** Backup & Restore (toàn bộ localStorage) **************/
+    const backupBtn  = document.getElementById('backupBtn');
+    const restoreBtn = document.getElementById('restoreBtn');
+    const restoreFileInput = document.getElementById('restoreFile');
+    const backupMsg  = document.getElementById('backupMsg');
+
+    function collectAllLocalStorage() {
+      const dump = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        try { dump[k] = JSON.parse(localStorage.getItem(k)); }
+        catch { dump[k] = localStorage.getItem(k); }
+      }
+      dump.__meta = {
+        exportedAt: new Date().toISOString(),
+        origin: location.origin,
+        note: 'Backup toàn bộ localStorage của ứng dụng (index + admin).'
+      };
+      return dump;
+    }
+    function downloadJSON(obj, filenamePrefix='chat-admin-backup') {
+      const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${filenamePrefix}-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+    backupBtn?.addEventListener('click', () => {
+      const data = collectAllLocalStorage();
+      downloadJSON(data);
+      backupMsg.textContent = 'Đã tạo file sao lưu.';
+    });
+    restoreBtn?.addEventListener('click', async () => {
+      const file = restoreFileInput.files?.[0];
+      if (!file) { backupMsg.textContent = 'Vui lòng chọn file .json để khôi phục.'; return; }
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (typeof data !== 'object' || data === null) throw new Error('File không hợp lệ.');
+        if (!confirm('Khôi phục sẽ GHI ĐÈ các khóa hiện có trong localStorage. Tiếp tục?')) return;
+
+        for (const [k, v] of Object.entries(data)) {
+          if (k === '__meta') continue;
+          localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+        }
+
+        try { refreshApiUI?.(); } catch {}
+        try { renderKeys?.(); } catch {}
+
+        backupMsg.textContent = 'Khôi phục thành công. Hãy tải lại trang liên quan nếu cần.';
+      } catch (e) {
+        backupMsg.textContent = 'Lỗi khôi phục: ' + e.message;
+      }
+    });
+
+    /************** Key Management **************/
+    const userNameInput = $('#userNameInput');
+    const durationHours = $('#durationHours');
+    const keyOutput = $('#keyOutput');
+    const genKeyBtn = $('#genKeyBtn');
+    const createKeyBtn = $('#createKeyBtn');
+    const copyKeyBtn = $('#copyKeyBtn');
+
+    const keysBody = $('#keysBody');
+    const keysCount = $('#keysCount');
+
+    genKeyBtn.addEventListener('click', ()=> keyOutput.value = genKey());
+    copyKeyBtn.addEventListener('click', async ()=>{
+      if(!keyOutput.value) return;
+      await navigator.clipboard.writeText(keyOutput.value);
+      copyKeyBtn.textContent='Đã copy';
+      setTimeout(()=>copyKeyBtn.textContent='Copy key', 1200);
+    });
+
+    function readKeys(){ return getDB(DB_KEYS.USER_KEYS, []); }
+    function writeKeys(arr){ setDB(DB_KEYS.USER_KEYS, arr); }
+
+    createKeyBtn.addEventListener('click', ()=>{
+      const name = userNameInput.value.trim();
+      let dur = parseInt(durationHours.value,10);
+      if(!name){ alert('Nhập tên người dùng'); return; }
+      if(!Number.isFinite(dur) || dur<=0){ alert('Thời hạn (giờ) không hợp lệ'); return; }
+      const keyStr = keyOutput.value || genKey();
+      const now = Date.now();
+      const expiresAt = new Date(now + dur*3600*1000).toISOString();
+
+      const item = {
+        keyId: genUUID(),
+        key: keyStr,
+        userName: name,
+        createdAt: new Date(now).toISOString(),
+        expiresAt,
+        durationHours: dur,
+        allowedDevices: [],
+        activeDevices: []
+      };
+      const arr = readKeys();
+      if(arr.some(k=>k.key===keyStr)){ alert('Key trùng. Hãy Random lại.'); return; }
+      arr.push(item); writeKeys(arr);
+      keyOutput.value = item.key;
+      renderKeys();
+      alert('Đã tạo key.');
+    });
+
+    function statusOf(item){
+      const now = Date.now();
+      if(new Date(item.expiresAt).getTime() <= now) return ['Hết hạn','bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'];
+      if((item.activeDevices||[]).length>0) return ['Đang hoạt động','bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'];
+      return ['Chưa kích hoạt','bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'];
+    }
+
+    function renderKeys(){
+      const arr = readKeys().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+      keysCount.textContent = `${arr.length} key`;
+      keysBody.innerHTML = '';
+      for(const item of arr){
+        const [label, cls] = statusOf(item);
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-slate-200 dark:border-slate-800';
+        tr.innerHTML = `
+          <td class="px-3 py-2 font-medium">${item.userName}</td>
+          <td class="px-3 py-2">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs">${item.key}</span>
+              <button data-act="copy" data-id="${item.keyId}" class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">Copy</button>
+            </div>
+          </td>
+          <td class="px-3 py-2">
+            <div class="space-y-1">
+              <div class="text-xs text-slate-500">${(item.allowedDevices||[]).length} thiết bị được phép</div>
+              <div class="flex flex-wrap gap-1">
+                ${(item.allowedDevices||[]).map(d=>`<span class="badge bg-slate-100 dark:bg-slate-800">${d.slice(0,6)}…</span>`).join('')}
+              </div>
+            </div>
+          </td>
+          <td class="px-3 py-2">${fmt(item.expiresAt)}</td>
+          <td class="px-3 py-2"><span class="badge ${cls}">${label}</span></td>
+          <td class="px-3 py-2">
+            <div class="flex flex-wrap gap-2">
+              <button data-act="add-device" data-id="${item.keyId}" class="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs">Thêm thiết bị</button>
+              <button data-act="reset-key" data-id="${item.keyId}" class="px-2 py-1 rounded-lg bg-amber-600 text-white text-xs">Reset key</button>
+              <button data-act="extend" data-id="${item.keyId}" class="px-2 py-1 rounded-lg bg-emerald-600 text-white text-xs">Gia hạn</button>
+              <button data-act="delete" data-id="${item.keyId}" class="px-2 py-1 rounded-lg bg-rose-600 text-white text-xs">Xoá</button>
+            </div>
+          </td>`;
+        keysBody.appendChild(tr);
+      }
+    }
+
+    keysBody.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      let arr = readKeys();
+      const item = arr.find(k=>k.keyId===id);
+      if(!item) return;
+
+      if(act==='copy'){
+        await navigator.clipboard.writeText(item.key);
+        btn.textContent='Đã copy'; setTimeout(()=>btn.textContent='Copy', 1000);
+      }
+      if(act==='add-device'){
+        const dev = prompt('Nhập ID Thiết bị cần thêm (dán từ trang index của user):');
+        if(!dev) return;
+        item.allowedDevices = Array.from(new Set([...(item.allowedDevices||[]), dev.trim()]));
+        writeKeys(arr); renderKeys();
+      }
+      if(act==='reset-key'){
+        if(!confirm('Reset sẽ tạo key mới cho user này. Tiếp tục?')) return;
+        item.key = genKey();
+        item.activeDevices = [];
+        writeKeys(arr); renderKeys();
+      }
+      if(act==='extend'){
+        const h = prompt('Gia hạn thêm bao nhiêu giờ?', '24'); if(!h) return;
+        const add = parseInt(h,10);
+        if(Number.isFinite(add) && add>0){
+          const base = Math.max(Date.now(), new Date(item.expiresAt).getTime());
+          item.expiresAt = new Date(base + add*3600*1000).toISOString();
+          writeKeys(arr); renderKeys();
+        }
+      }
+      if(act==='delete'){
+        if(!confirm('Xoá key này?')) return;
+        arr = arr.filter(k=>k.keyId!==id);
+        writeKeys(arr); renderKeys();
+      }
+    });
+
+    (function init(){
+      refreshApiUI();
+      renderKeys();
+    })();
+  </script>
+</body>
+</html>

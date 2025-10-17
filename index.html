@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kích hoạt & ChatGPT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { height: 100%; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .glass { backdrop-filter: blur(8px); background: color-mix(in oklab, white 70%, transparent); }
+    .dark .glass { background: color-mix(in oklab, black 50%, transparent); }
+    .scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scrollbar::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 9999px; }
+    .msg { animation: fadeIn .15s ease-in; } @keyframes fadeIn{from{opacity:.2;transform:translateY(2px)} to{opacity:1;transform:none}}
+    .typing-dot { animation: bounce 1s infinite alternate; } @keyframes bounce{to{transform:translateY(-2px)}}
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+  </style>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <div class="mx-auto max-w-6xl p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow"></div>
+        <div>
+          <h1 class="text-xl font-bold">Kích hoạt & ChatGPT</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Ràng buộc thiết bị, quản lý key và chat với ChatGPT</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="modeBadge" class="badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">Demo</span>
+        <button id="quickBackupBtn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm">Sao lưu</button>
+        <button id="themeBtn" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm">Sáng/Tối</button>
+        <a href="admin.html" class="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm shadow hover:bg-indigo-500">Trang Admin</a>
+      </div>
+    </header>
+
+    <!-- Activation Panel -->
+    <section id="activationView" class="grid md:grid-cols-2 gap-6">
+
+      <div class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h2 class="font-semibold mb-4">Thông tin thiết bị</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm text-slate-500">ID Thiết bị</label>
+            <div class="mt-1 flex items-center gap-2">
+              <input id="deviceId" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" readonly />
+              <button id="copyDeviceBtn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm">Copy</button>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">
+              Gửi ID này cho Admin để thêm vào key. <b>Chưa được Admin thêm thì không thể kích hoạt.</b>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <h2 class="font-semibold mb-4">Kích hoạt sử dụng</h2>
+        <div class="space-y-3">
+          <label class="text-sm text-slate-500">Nhập key kích hoạt</label>
+          <input id="activationKeyInput" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" placeholder="vd: GPT-AB12-CD34-EF56" />
+          <div class="flex items-center gap-2">
+            <button id="activateBtn" class="px-4 py-2 rounded-xl bg-green-600 text-white shadow hover:bg-green-500">Kích hoạt</button>
+            <button id="clearKeyBtn" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700">Xoá</button>
+          </div>
+          <p id="activationMsg" class="text-sm mt-2"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- App Panel (after activation) -->
+    <section id="appView" class="hidden grid lg:grid-cols-[320px_1fr] gap-6">
+
+      <!-- Sidebar -->
+      <aside class="glass rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm h-fit sticky top-4">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500"></div>
+          <div>
+            <div id="userName" class="font-semibold">User</div>
+            <div id="userKeyShort" class="text-xs text-slate-500">—</div>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Trạng thái</span>
+            <span id="keyStatus" class="badge bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">—</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Hết hạn</span>
+            <span id="expiresAt">—</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500">Còn lại</span>
+            <span id="countdown">—</span>
+          </div>
+
+          <div class="h-px bg-slate-200 dark:bg-slate-800 my-3"></div>
+
+          <button id="copySessionBtn" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800">Copy thông tin</button>
+          <button id="logoutBtn" class="w-full px-3 py-2 rounded-xl bg-red-600 text-white">Đăng xuất</button>
+        </div>
+      </aside>
+
+      <!-- Chat Area -->
+      <div class="glass rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[75vh]">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <div class="font-semibold">ChatGPT Chat</div>
+            <div class="text-xs text-slate-500">Tự động: Chat thật nếu có API key, nếu không sẽ chạy demo cục bộ.</div>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-slate-500">Chế độ:</span>
+            <span id="modeText" class="badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">Demo</span>
+          </div>
+        </div>
+
+        <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar">
+          <div class="msg flex items-start gap-3">
+            <div class="h-8 w-8 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 max-w-[80%]">
+              <div class="text-xs text-slate-500 mb-1">ChatGPT</div>
+              <div>Xin chào <span id="chatUserName">bạn</span>! Mình có thể giúp gì?</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-slate-200 dark:border-slate-800">
+          <form id="chatForm" class="flex items-end gap-2">
+            <textarea id="chatInput" rows="1" placeholder="Nhập tin nhắn..." class="flex-1 resize-none px-3 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 outline-none"></textarea>
+            <button class="px-4 py-2 rounded-2xl bg-indigo-600 text-white shadow hover:bg-indigo-500">Gửi</button>
+          </form>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <script>
+    /************** Keys & Utilities **************/
+    const DB_KEYS = {
+      ADMIN_CREDS: 'adminCreds',
+      OPENAI_KEY: 'openaiApiKey',
+      USER_KEYS : 'userKeys',
+      SESS      : 'activeSession',
+      DEVICE_ID : 'deviceId'
+    };
+    const $ = (s) => document.querySelector(s);
+    const toLocalISO = (d) => new Date(d).toLocaleString();
+    const genUUID = () => {
+      const arr = crypto.getRandomValues(new Uint8Array(16));
+      arr[6] = (arr[6] & 0x0f) | 0x40;
+      arr[8] = (arr[8] & 0x3f) | 0x80;
+      const hex = [...arr].map(b=>b.toString(16).padStart(2,'0')).join('');
+      return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+    };
+    const getDB = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? def } catch { return def } };
+    const setDB = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+    (function bootstrap(){
+      if(!localStorage.getItem(DB_KEYS.DEVICE_ID)) localStorage.setItem(DB_KEYS.DEVICE_ID, genUUID());
+      if(!getDB(DB_KEYS.USER_KEYS,null)) setDB(DB_KEYS.USER_KEYS,[]);
+      if(!getDB(DB_KEYS.ADMIN_CREDS,null)) setDB(DB_KEYS.ADMIN_CREDS,{username:'admin', passwordHash:'', mustChange:true});
+    })();
+
+    /************** Theme **************/
+    const themeBtn = $('#themeBtn');
+    themeBtn?.addEventListener('click', ()=> document.documentElement.classList.toggle('dark'));
+
+    /************** Activation / Session **************/
+    const activationView = $('#activationView');
+    const appView = $('#appView');
+    const deviceIdEl = $('#deviceId');
+    const copyDeviceBtn = $('#copyDeviceBtn');
+    const activationKeyInput = $('#activationKeyInput');
+    const activateBtn = $('#activateBtn');
+    const clearKeyBtn = $('#clearKeyBtn');
+    const activationMsg = $('#activationMsg');
+
+    const userNameEl = $('#userName');
+    const userKeyShortEl = $('#userKeyShort');
+    const keyStatusEl = $('#keyStatus');
+    const expiresAtEl = $('#expiresAt');
+    const countdownEl = $('#countdown');
+    const copySessionBtn = $('#copySessionBtn');
+    const logoutBtn = $('#logoutBtn');
+    const chatUserNameEl = $('#chatUserName');
+
+    const modeBadge = $('#modeBadge');
+    const modeText = $('#modeText');
+
+    const deviceId = localStorage.getItem(DB_KEYS.DEVICE_ID);
+    deviceIdEl.value = deviceId;
+
+    copyDeviceBtn.addEventListener('click', async ()=>{
+      await navigator.clipboard.writeText(deviceId);
+      copyDeviceBtn.textContent = 'Đã copy';
+      setTimeout(()=> copyDeviceBtn.textContent='Copy', 1200);
+    });
+
+    clearKeyBtn.addEventListener('click', ()=>{
+      activationKeyInput.value = '';
+      activationMsg.textContent = '';
+    });
+
+    function getKeyByValue(keyStr){
+      const keys = getDB(DB_KEYS.USER_KEYS, []);
+      return keys.find(k => k.key === keyStr);
+    }
+    function saveKey(updated){
+      const keys = getDB(DB_KEYS.USER_KEYS, []);
+      const idx = keys.findIndex(k => k.keyId === updated.keyId);
+      if(idx>-1){ keys[idx] = updated; setDB(DB_KEYS.USER_KEYS, keys); }
+    }
+
+    function showActivation(){
+      activationView.classList.remove('hidden');
+      appView.classList.add('hidden');
+    }
+    function showApp(session){
+      userNameEl.textContent = session.userName;
+      chatUserNameEl.textContent = session.userName;
+      userKeyShortEl.textContent = session.key.replace(/(.{7}).+/, '$1…');
+      updateStatusUI(session);
+      activationView.classList.add('hidden');
+      appView.classList.remove('hidden');
+      reflectMode();
+    }
+
+    function updateStatusUI(session){
+      const msLeft = new Date(session.expiresAt).getTime() - Date.now();
+      expiresAtEl.textContent = toLocalISO(session.expiresAt);
+      if(msLeft <= 0){
+        keyStatusEl.textContent = 'Hết hạn';
+        keyStatusEl.className = 'badge bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+        countdownEl.textContent = '0s';
+        logout();
+        return;
+      } else {
+        keyStatusEl.textContent = 'Đang hoạt động';
+        keyStatusEl.className = 'badge bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+      }
+      const sec = Math.floor(msLeft/1000);
+      const hh = String(Math.floor(sec/3600)).padStart(2,'0');
+      const mm = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+      const ss = String(sec%60).padStart(2,'0');
+      countdownEl.textContent = `${hh}:${mm}:${ss}`;
+    }
+
+    setInterval(()=>{ const s=getDB(DB_KEYS.SESS,null); if(s) updateStatusUI(s); }, 1000);
+
+    function logout(){
+      const session = getDB(DB_KEYS.SESS,null);
+      if(session){
+        const keyObj = getKeyByValue(session.key);
+        if(keyObj){
+          keyObj.activeDevices = (keyObj.activeDevices||[]).filter(d=>d!==session.deviceId);
+          saveKey(keyObj);
+        }
+      }
+      localStorage.removeItem(DB_KEYS.SESS);
+      showActivation();
+    }
+    logoutBtn.addEventListener('click', logout);
+
+    copySessionBtn.addEventListener('click', async ()=>{
+      const session = getDB(DB_KEYS.SESS,null);
+      if(!session) return;
+      const txt = `User: ${session.userName}\nKey: ${session.key}\nThiết bị: ${session.deviceId}\nHết hạn: ${toLocalISO(session.expiresAt)}`;
+      await navigator.clipboard.writeText(txt);
+      copySessionBtn.textContent = 'Đã copy';
+      setTimeout(()=> copySessionBtn.textContent='Copy thông tin', 1200);
+    });
+
+    activateBtn.addEventListener('click', async ()=>{
+      const keyStr = activationKeyInput.value.trim();
+      activationMsg.className = 'text-sm mt-2';
+      if(!keyStr){ activationMsg.textContent='Vui lòng nhập key'; activationMsg.classList.add('text-rose-600'); return; }
+      const keyObj = getKeyByValue(keyStr);
+      if(!keyObj){ activationMsg.textContent='Key không tồn tại. Kiểm tra lại với Admin.'; activationMsg.classList.add('text-rose-600'); return; }
+
+      if(new Date(keyObj.expiresAt).getTime() <= Date.now()){
+        activationMsg.textContent='Key đã hết hạn. Liên hệ Admin để gia hạn.';
+        activationMsg.classList.add('text-rose-600'); return;
+      }
+
+      const allowed = keyObj.allowedDevices || [];
+      if (!allowed.includes(deviceId)) {
+        activationMsg.textContent='Thiết bị này chưa được cấp quyền cho key. Gửi ID cho Admin để thêm.';
+        activationMsg.classList.add('text-rose-600'); return;
+      }
+
+      keyObj.activeDevices = Array.from(new Set([...(keyObj.activeDevices||[]), deviceId]));
+      saveKey(keyObj);
+
+      const session = {
+        key: keyObj.key,
+        userName: keyObj.userName,
+        deviceId,
+        expiresAt: keyObj.expiresAt
+      };
+      setDB(DB_KEYS.SESS, session);
+      activationMsg.textContent='Kích hoạt thành công!';
+      activationMsg.classList.add('text-emerald-600');
+
+      showApp(session);
+    });
+
+    (function restore(){
+      const session = getDB(DB_KEYS.SESS,null);
+      if(!session){ showActivation(); return; }
+      if(new Date(session.expiresAt).getTime() <= Date.now()){ logout(); return; }
+      const keyObj = (getDB(DB_KEYS.USER_KEYS, []) || []).find(k => k.key === session.key);
+      const allowed = keyObj?.allowedDevices || [];
+      if (!keyObj || !allowed.includes(session.deviceId)) { logout(); return; }
+      showApp(session);
+    })();
+
+    /************** ChatGPT (OpenAI) **************/
+    const chatBox = $('#chatBox');
+    const chatForm = $('#chatForm');
+    const chatInput = $('#chatInput');
+
+    // User phải nằm bên phải, assistant bên trái
+    function addMsg(role, text){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg flex items-start gap-3 ' + (role === 'user' ? 'justify-end' : '');
+
+      const avatar = document.createElement('div');
+      avatar.className = 'h-8 w-8 rounded-full ' + (role==='user' ? 'bg-indigo-400' : 'bg-slate-300 dark:bg-slate-700');
+
+      const bubble = document.createElement('div');
+      const bubbleBase = 'rounded-2xl p-3 max-w-[80%] whitespace-pre-wrap border';
+      const bubbleAssistant = 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+      const bubbleUser = 'bg-indigo-600 text-white border-indigo-500';
+      bubble.className = `${bubbleBase} ${role==='user' ? bubbleUser : bubbleAssistant}`;
+
+      const who = role === 'user' ? 'Bạn' : 'ChatGPT';
+      bubble.innerHTML = `<div class="text-xs opacity-80 mb-1">${who}</div>${escapeHtml(text)}`;
+
+      if(role === 'user'){
+        wrap.appendChild(bubble);
+        wrap.appendChild(avatar);
+      }else{
+        wrap.appendChild(avatar);
+        wrap.appendChild(bubble);
+      }
+
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    }
+    function addTyping(){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg flex items-start gap-3';
+      wrap.id = 'typing';
+      wrap.innerHTML = `
+        <div class="h-8 w-8 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 max-w-[80%]">
+          <div class="text-xs text-slate-500 mb-1">ChatGPT</div>
+          <div class="flex gap-1"><span class="typing-dot">•</span><span class="typing-dot" style="animation-delay:.15s">•</span><span class="typing-dot" style="animation-delay:.3s">•</span></div>
+        </div>`;
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    function removeTyping(){ document.querySelector('#typing')?.remove(); }
+
+    function reflectMode(){
+      const hasKey = !!localStorage.getItem(DB_KEYS.OPENAI_KEY);
+      const text = hasKey ? 'Chat thật (OpenAI API)' : 'Demo';
+      modeText.textContent = text;
+      modeBadge.textContent = text;
+      modeBadge.className = 'badge ' + (hasKey
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200');
+    }
+
+    window.addEventListener('storage', (e)=>{
+      if(e.key === DB_KEYS.OPENAI_KEY){ reflectMode(); }
+    });
+
+    async function mockReply(prompt){
+      const canned = [
+        "Đây là giao diện demo ChatGPT chạy cục bộ.",
+        "Nhập OpenAI API key ở trang Admin để bật Chat thật.",
+        "Cứ hỏi thử nhé! 🙂"
+      ];
+      const echo = prompt.length < 200 ? `Bạn hỏi: “${prompt}”` : "Mình đã nhận câu hỏi dài của bạn.";
+      return `${echo}\n\n${canned[Math.floor(Math.random()*canned.length)]}`;
+    }
+
+    async function callOpenAI(promptText){
+      const apiKey = localStorage.getItem(DB_KEYS.OPENAI_KEY);
+      if(!apiKey) return null;
+      try{
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'Bạn là trợ lý hữu ích.' },
+              { role: 'user', content: promptText }
+            ]
+          })
+        });
+        if(!res.ok){
+          let msg = 'API error';
+          try { const e = await res.json(); msg = e.error?.message || msg; } catch {}
+          throw new Error(msg);
+        }
+        const data = await res.json();
+        return data.choices?.[0]?.message?.content || '(<không có nội dung phản hồi>)';
+      }catch(e){
+        return `Không gọi được OpenAI API: ${e.message}`;
+      }
+    }
+
+    chatForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if(!text) return;
+      addMsg('user', text);
+      chatInput.value = '';
+      addTyping();
+
+      let reply = null;
+      if(localStorage.getItem(DB_KEYS.OPENAI_KEY)){
+        reply = await callOpenAI(text);
+      }
+      if(!reply){ reply = await mockReply(text); }
+
+      removeTyping();
+      addMsg('assistant', reply);
+    });
+
+    // ====== SAO LƯU NHANH (INDEX) ======
+    const quickBackupBtn = document.getElementById('quickBackupBtn');
+    function collectAllLocalStorage_INDEX() {
+      const dump = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        try { dump[k] = JSON.parse(localStorage.getItem(k)); }
+        catch { dump[k] = localStorage.getItem(k); }
+      }
+      dump.__meta = {
+        exportedAt: new Date().toISOString(),
+        origin: location.origin,
+        note: 'Backup toàn bộ localStorage từ trang index.'
+      };
+      return dump;
+    }
+    function downloadJSON_INDEX(obj, filenamePrefix='chat-index-backup') {
+      const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${filenamePrefix}-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+    quickBackupBtn?.addEventListener('click', () => {
+      const data = collectAllLocalStorage_INDEX();
+      downloadJSON_INDEX(data);
+    });
+
+    // Khởi tạo nhãn chế độ
+    reflectMode();
+  </script>
+</body>
+</html>
